@@ -4,6 +4,7 @@ use teloxide::utils::command::BotCommands;
 use crate::util::env_or_default;
 
 mod util;
+mod observability;
 
 #[derive(BotCommands, Clone)]
 #[command(rename_rule = "lowercase", description = "These commands are supported:")]
@@ -38,6 +39,7 @@ async fn handle_call_police(bot: Bot, msg: Message) -> ResponseResult<()> {
 async fn main() {
     pretty_env_logger::init();
     dotenv::dotenv().ok();
+    observability::tracing::init_tracer();
     log::info!("Starting call the police bot...");
 
     let bot = Bot::from_env()
