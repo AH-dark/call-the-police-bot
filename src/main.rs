@@ -41,7 +41,7 @@ async fn main() {
     log::info!("Starting call the police bot...");
 
     let bot = Bot::from_env()
-        .set_api_url(reqwest::Url::parse(env_or_default("TELEGRAM_API_URL", "https://api.telegram.org").into()).unwrap());
+        .set_api_url(reqwest::Url::parse(env_or_default("TELEGRAM_API_URL", "https://api.telegram.org").as_str()).unwrap());
 
     let handler = Update::filter_message()
         .filter_command::<BotCommand>()

@@ -1,9 +1,11 @@
+use std::fmt::Debug;
+
 use rand::prelude::*;
 
 /// Generate a random number between `min` and `max`.
 #[tracing::instrument]
 pub fn rand_num<T>(min: T, max: T) -> T
-    where T: rand::distributions::uniform::SampleUniform + PartialOrd {
+    where T: rand::distributions::uniform::SampleUniform + PartialOrd + Debug {
     if min > max {
         thread_rng().gen_range(max..min)
     } else {
