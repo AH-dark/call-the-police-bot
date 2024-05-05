@@ -1,6 +1,7 @@
 use rand::prelude::*;
 
 /// Generate a random number between `min` and `max`.
+#[tracing::instrument]
 pub fn rand_num<T>(min: T, max: T) -> T
     where T: rand::distributions::uniform::SampleUniform + PartialOrd {
     if min > max {
@@ -14,6 +15,7 @@ pub fn rand_num<T>(min: T, max: T) -> T
 pub static CHARACTERS: &str = "🚨👮🚔🚓";
 
 /// Generate a random string of emojis.
+#[tracing::instrument]
 pub fn call_police_string() -> String {
     let times = rand_num(8, 96);
     let mut rng = thread_rng();
@@ -24,6 +26,12 @@ pub fn call_police_string() -> String {
     }
 
     s
+}
+
+/// Get the value of an environment variable or a default value.
+#[tracing::instrument]
+pub fn env_or_default(key: &str, default: &str) -> String {
+    std::env::var(key).unwrap_or_else(|_| default.to_string())
 }
 
 #[cfg(test)]
