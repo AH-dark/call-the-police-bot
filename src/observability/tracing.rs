@@ -1,9 +1,10 @@
 use opentelemetry::global;
-use opentelemetry_otlp::{ExportConfig, WithExportConfig};
+use opentelemetry_otlp::{ExportConfig, HttpExporterBuilder, SpanExporterBuilder, TonicExporterBuilder, WithExportConfig};
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::runtime::Tokio;
-use opentelemetry_sdk::trace;
-use opentelemetry_sdk::trace::{Sampler, TracerProvider};
+use opentelemetry_sdk::trace::Sampler;
+use tracing_subscriber::{EnvFilter, Registry};
+use tracing_subscriber::layer::SubscriberExt;
 
 use crate::observability::resource::init_resource;
 
@@ -14,25 +15,24 @@ pub fn init_tracer() {
     };
 
     let exporter = match std::env::var("OTEL_EXPORTER").unwrap_or_else(|_| "otlp_grpc".to_string()).as_str() {
-        "otlp_http" => opentelemetry_otlp::new_exporter()
-            .http()
-            .with_export_config(export_config)
-            .build_span_exporter()
-            .unwrap(),
-        "otlp_grpc" => opentelemetry_otlp::new_exporter()
-            .tonic()
-            .with_export_config(export_config)
-            .build_span_exporter()
-            .unwrap(),
+        "otlp_http" => SpanExporterBuilder::Http(
+            HttpExporterBuilder::default().with_export_config(export_config),
+        ),
+        "otlp_grpc" => SpanExporterBuilder::Tonic(
+            TonicExporterBuilder::default().with_export_config(export_config),
+        ),
         _ => {
             panic!("`OTEL_EXPORTER` not supported");
         }
     };
 
-    let provider = TracerProvider::builder()
-        .with_batch_exporter(exporter, Tokio)
-        .with_config(
-            trace::config()
+    global::set_text_map_propagator(TraceContextPropagator::new());
+
+    let tracer = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(exporter)
+        .with_trace_config(
+            opentelemetry_sdk::trace::config()
                 .with_sampler(Sampler::TraceIdRatioBased(
                     std::env::var("OTEL_SAMPLE_RATE")
                         .unwrap_or_else(|_| "1".to_string())
@@ -41,8 +41,12 @@ pub fn init_tracer() {
                 ))
                 .with_resource(init_resource()),
         )
-        .build();
+        .install_batch(Tokio)
+        .expect("Failed to install `opentelemetry` tracer.");
 
-    global::set_text_map_propagator(TraceContextPropagator::new());
-    global::set_tracer_provider(provider);
+    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO"));
+    let subscriber = Registry::default().with(telemetry).with(env_filter);
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("Failed to install `tracing` subscriber.");
 }
