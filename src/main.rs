@@ -9,10 +9,21 @@ mod observability;
 #[derive(BotCommands, Clone)]
 #[command(rename_rule = "lowercase", description = "These commands are supported:")]
 enum BotCommand {
+    #[command(description = "Start the bot")]
+    Start,
     #[command(description = "Get help")]
     Help,
     #[command(description = "Call the police")]
     CallPolice,
+}
+
+#[tracing::instrument]
+async fn handle_start(bot: Bot, msg: Message) -> ResponseResult<()> {
+    bot.send_message(msg.chat.id, "Hello! I'm the call the police bot. You can view available commands by typing /help.")
+        .send()
+        .await?;
+
+    Ok(())
 }
 
 #[tracing::instrument]
