@@ -58,6 +58,7 @@ async fn main() {
 
     let handler = Update::filter_message()
         .filter_command::<BotCommand>()
+        .branch(dptree::case![BotCommand::Start].endpoint(handle_start))
         .branch(dptree::case![BotCommand::Help].endpoint(handle_help))
         .branch(dptree::case![BotCommand::CallPolice].endpoint(handle_call_police));
 
