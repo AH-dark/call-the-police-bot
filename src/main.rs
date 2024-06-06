@@ -1,50 +1,13 @@
-use teloxide::prelude::*;
-use teloxide::utils::command::BotCommands;
+use teloxide::{Bot, dptree};
+use teloxide::dispatching::{HandlerExt, UpdateFilterExt};
+use teloxide::prelude::{Dispatcher, Update};
 
+use crate::handlers::*;
 use crate::util::env_or_default;
 
-mod util;
+mod handlers;
 mod observability;
-
-#[derive(BotCommands, Clone)]
-#[command(rename_rule = "lowercase", description = "These commands are supported:")]
-enum BotCommand {
-    #[command(description = "Start the bot")]
-    Start,
-    #[command(description = "Get help")]
-    Help,
-    #[command(description = "Call the police")]
-    CallPolice,
-}
-
-#[tracing::instrument]
-async fn handle_start(bot: Bot, msg: Message) -> ResponseResult<()> {
-    bot.send_message(msg.chat.id, "Hello! I'm the call the police bot. You can view available commands by typing /help.")
-        .send()
-        .await?;
-
-    Ok(())
-}
-
-#[tracing::instrument]
-async fn handle_help(bot: Bot, msg: Message) -> ResponseResult<()> {
-    bot.send_message(msg.chat.id, BotCommand::descriptions().to_string())
-        .reply_to_message_id(msg.id)
-        .send()
-        .await?;
-
-    Ok(())
-}
-
-#[tracing::instrument]
-async fn handle_call_police(bot: Bot, msg: Message) -> ResponseResult<()> {
-    bot.send_message(msg.chat.id, util::call_police_string())
-        .reply_to_message_id(msg.id)
-        .send()
-        .await?;
-
-    Ok(())
-}
+mod util;
 
 #[tokio::main]
 async fn main() {
@@ -53,14 +16,22 @@ async fn main() {
     observability::tracing::init_tracer();
     log::info!("Starting call the police bot...");
 
-    let bot = Bot::from_env()
-        .set_api_url(reqwest::Url::parse(env_or_default("TELEGRAM_API_URL", "https://api.telegram.org").as_str()).unwrap());
+    let bot = Bot::from_env().set_api_url(
+        reqwest::Url::parse(
+            env_or_default("TELEGRAM_API_URL", "https://api.telegram.org").as_str(),
+        )
+        .unwrap(),
+    );
 
-    let handler = Update::filter_message()
-        .filter_command::<BotCommand>()
-        .branch(dptree::case![BotCommand::Start].endpoint(handle_start))
-        .branch(dptree::case![BotCommand::Help].endpoint(handle_help))
-        .branch(dptree::case![BotCommand::CallPolice].endpoint(handle_call_police));
+    let handler = dptree::entry()
+        .branch(
+            Update::filter_message()
+                .filter_command::<BotCommand>()
+                .branch(dptree::case![BotCommand::Start].endpoint(handle_start))
+                .branch(dptree::case![BotCommand::Help].endpoint(handle_help))
+                .branch(dptree::case![BotCommand::CallPolice].endpoint(handle_call_police)),
+        )
+        .branch(Update::filter_inline_query().endpoint(handle_inline_query));
 
     Dispatcher::builder(bot, handler)
         .distribution_function(|_| None::<std::convert::Infallible>)
