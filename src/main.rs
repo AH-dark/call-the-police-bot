@@ -1,6 +1,6 @@
-use teloxide::{Bot, dptree};
+use teloxide::{Bot, dptree, update_listeners};
 use teloxide::dispatching::{HandlerExt, UpdateFilterExt};
-use teloxide::prelude::{Dispatcher, Update};
+use teloxide::prelude::{Dispatcher, LoggingErrorHandler, Update};
 
 use crate::handlers::*;
 use crate::util::env_or_default;
@@ -10,7 +10,7 @@ mod observability;
 mod util;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     pretty_env_logger::init();
     dotenv::dotenv().ok();
     observability::tracing::init_tracer();
@@ -22,6 +22,19 @@ async fn main() {
         )
         .unwrap(),
     );
+
+    let update_listener = update_listeners::webhooks::axum(
+        bot.clone(),
+        update_listeners::webhooks::Options::new(
+            env_or_default("WEBHOOK_LISTEN_ADDR", "0.0.0.0:8080")
+                .parse()
+                .unwrap(),
+            env_or_default("WEBHOOK_URL", "http://call-the-police-bot:8080")
+                .parse()
+                .unwrap(),
+        ),
+    )
+    .await?;
 
     let handler = dptree::entry()
         .branch(
@@ -36,6 +49,8 @@ async fn main() {
     Dispatcher::builder(bot, handler)
         .distribution_function(|_| None::<std::convert::Infallible>)
         .build()
-        .dispatch()
+        .dispatch_with_listener(update_listener, LoggingErrorHandler::new())
         .await;
+
+    Ok(())
 }
