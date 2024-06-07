@@ -1,3 +1,4 @@
+use anyhow::Context;
 use teloxide::{Bot, dptree, update_listeners};
 use teloxide::dispatching::{HandlerExt, UpdateFilterExt};
 use teloxide::prelude::{Dispatcher, LoggingErrorHandler, Update};
@@ -11,8 +12,12 @@ mod util;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    match dotenv::dotenv() {
+        Ok(_) => log::info!("Loaded .env file"),
+        Err(e) => log::warn!("Failed to load .env file: {}", e),
+    }
+
     pretty_env_logger::init();
-    dotenv::dotenv().ok();
     observability::tracing::init_tracer();
     log::info!("Starting call the police bot...");
 
@@ -23,18 +28,23 @@ async fn main() -> anyhow::Result<()> {
         .unwrap(),
     );
 
-    let update_listener = update_listeners::webhooks::axum(
-        bot.clone(),
-        update_listeners::webhooks::Options::new(
-            env_or_default("WEBHOOK_LISTEN_ADDR", "0.0.0.0:8080")
-                .parse()
-                .unwrap(),
-            env_or_default("WEBHOOK_URL", "http://call-the-police-bot:8080")
-                .parse()
-                .unwrap(),
-        ),
-    )
-    .await?;
+    let update_listener = {
+        let webhook_listen_addr = env_or_default("WEBHOOK_LISTEN_ADDR", "0.0.0.0:8080")
+            .parse()
+            .unwrap();
+        log::debug!("webhook_listen_addr: {}", webhook_listen_addr);
+
+        let webhook_url = env_or_default("WEBHOOK_URL", "http://call-the-police-bot:8080")
+            .parse()
+            .unwrap();
+        log::debug!("webhook_url: {}", webhook_url);
+
+        update_listeners::webhooks::axum(
+            bot.clone(),
+            update_listeners::webhooks::Options::new(webhook_listen_addr, webhook_url),
+        )
+        .await?
+    };
 
     let handler = dptree::entry()
         .branch(

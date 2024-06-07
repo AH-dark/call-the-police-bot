@@ -45,7 +45,8 @@ pub async fn handle_help(bot: Bot, msg: Message) -> ResponseResult<()> {
 
 #[tracing::instrument]
 pub async fn handle_call_police(bot: Bot, msg: Message) -> ResponseResult<()> {
-    bot.send_message(msg.chat.id, util::call_police_string())
+    let times = util::rand_num(8, 96);
+    bot.send_message(msg.chat.id, util::call_police_string(times))
         .reply_to_message_id(msg.id)
         .send()
         .await?;
@@ -55,10 +56,18 @@ pub async fn handle_call_police(bot: Bot, msg: Message) -> ResponseResult<()> {
 
 #[tracing::instrument]
 pub async fn handle_inline_query(bot: Bot, query: InlineQuery) -> ResponseResult<()> {
+    let times = query
+        .query
+        .parse::<usize>()
+        .unwrap_or_else(|_| util::rand_num(8, 96))
+        .max(1);
+
     let results = vec![InlineQueryResult::Article(InlineQueryResultArticle::new(
         "call-the-police",
         "Call the police",
-        InputMessageContent::Text(InputMessageContentText::new(util::call_police_string())),
+        InputMessageContent::Text(InputMessageContentText::new(util::call_police_string(
+            times,
+        ))),
     ))];
 
     bot.answer_inline_query(query.id, results)

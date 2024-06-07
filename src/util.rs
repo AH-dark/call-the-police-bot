@@ -5,7 +5,9 @@ use rand::prelude::*;
 /// Generate a random number between `min` and `max`.
 #[tracing::instrument]
 pub fn rand_num<T>(min: T, max: T) -> T
-    where T: rand::distributions::uniform::SampleUniform + PartialOrd + Debug {
+where
+    T: rand::distributions::uniform::SampleUniform + PartialOrd + Debug,
+{
     if min > max {
         thread_rng().gen_range(max..min)
     } else {
@@ -18,12 +20,11 @@ pub static CHARACTERS: &str = "🚨👮🚔🚓";
 
 /// Generate a random string of emojis.
 #[tracing::instrument]
-pub fn call_police_string() -> String {
-    let times = rand_num(8, 96);
+pub fn call_police_string(n: usize) -> String {
     let mut rng = thread_rng();
-    let mut s = String::with_capacity(times); // pre-allocate memory
+    let mut s = String::with_capacity(n); // pre-allocate memory
 
-    for _ in 0..times {
+    for _ in 0..n {
         s.push(CHARACTERS.chars().choose(&mut rng).unwrap());
     }
 
@@ -50,10 +51,10 @@ mod tests {
 
     #[test]
     fn test_call_police_string() {
-        let s = call_police_string();
+        let s = call_police_string(8);
         assert!(!s.is_empty());
 
         let len = s.chars().count();
-        assert!(len >= 8 && len < 96);
+        assert_eq!(len, 8);
     }
 }
