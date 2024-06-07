@@ -62,13 +62,21 @@ pub async fn handle_inline_query(bot: Bot, query: InlineQuery) -> ResponseResult
         .unwrap_or_else(|_| util::rand_num(8, 96))
         .max(1);
 
-    let results = vec![InlineQueryResult::Article(InlineQueryResultArticle::new(
-        "call-the-police",
-        "Call the police",
-        InputMessageContent::Text(InputMessageContentText::new(util::call_police_string(
-            times,
-        ))),
-    ))];
+    let results = vec![InlineQueryResult::Article(
+        InlineQueryResultArticle::new(
+            "call-the-police",
+            "Call the police",
+            InputMessageContent::Text(InputMessageContentText::new(util::call_police_string(
+                times,
+            ))),
+        )
+        .description("Generate a random string of police emojis.")
+        .thumb_url(
+            "https://raw.githubusercontent.com/AH-dark/call-the-police-bot/main/assets/call_back_query_thumb.jpeg"
+                .parse()
+                .unwrap(),
+        ),
+    )];
 
     bot.answer_inline_query(query.id, results)
         .is_personal(true)
