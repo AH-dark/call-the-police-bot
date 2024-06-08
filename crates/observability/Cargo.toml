@@ -1,0 +1,17 @@
+[package]
+name = "observability"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "observability"
+path = "src/lib.rs"
+
+[dependencies]
+opentelemetry = { workspace = true }
+opentelemetry-otlp = { workspace = true, features = ["http-proto", "grpc-tonic", "reqwest"] }
+opentelemetry_sdk = { workspace = true, features = ["rt-tokio"] }
+opentelemetry-semantic-conventions = { workspace = true }
+tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["registry", "env-filter"] }

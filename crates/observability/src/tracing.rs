@@ -1,20 +1,26 @@
 use opentelemetry::global;
-use opentelemetry_otlp::{ExportConfig, HttpExporterBuilder, SpanExporterBuilder, TonicExporterBuilder, WithExportConfig};
+use opentelemetry_otlp::{
+    ExportConfig, HttpExporterBuilder, SpanExporterBuilder, TonicExporterBuilder, WithExportConfig,
+};
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::runtime::Tokio;
 use opentelemetry_sdk::trace::Sampler;
 use tracing_subscriber::{EnvFilter, Registry};
 use tracing_subscriber::layer::SubscriberExt;
 
-use crate::observability::resource::init_resource;
+use crate::resource::init_resource;
 
-pub fn init_tracer() {
+pub fn init_tracer(service_name: String, service_version: String) {
     let export_config = ExportConfig {
-        endpoint: std::env::var("OTEL_EXPORTER_ENDPOINT").unwrap_or_else(|_| "http://localhost:4317".to_string()),
+        endpoint: std::env::var("OTEL_EXPORTER_ENDPOINT")
+            .unwrap_or_else(|_| "http://localhost:4317".to_string()),
         ..Default::default()
     };
 
-    let exporter = match std::env::var("OTEL_EXPORTER").unwrap_or_else(|_| "otlp_grpc".to_string()).as_str() {
+    let exporter = match std::env::var("OTEL_EXPORTER")
+        .unwrap_or_else(|_| "otlp_grpc".to_string())
+        .as_str()
+    {
         "otlp_http" => SpanExporterBuilder::Http(
             HttpExporterBuilder::default().with_export_config(export_config),
         ),
@@ -39,7 +45,7 @@ pub fn init_tracer() {
                         .parse()
                         .unwrap(),
                 ))
-                .with_resource(init_resource()),
+                .with_resource(init_resource(service_name, service_version)),
         )
         .install_batch(Tokio)
         .expect("Failed to install `opentelemetry` tracer.");

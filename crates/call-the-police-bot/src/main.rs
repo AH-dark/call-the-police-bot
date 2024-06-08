@@ -6,7 +6,6 @@ use crate::handlers::*;
 use crate::util::env_or_default;
 
 mod handlers;
-mod observability;
 mod util;
 
 #[tokio::main]
@@ -15,9 +14,12 @@ async fn main() -> anyhow::Result<()> {
         Ok(_) => log::info!("Loaded .env file"),
         Err(e) => log::warn!("Failed to load .env file: {}", e),
     }
-
     pretty_env_logger::init();
-    observability::tracing::init_tracer();
+    observability::tracing::init_tracer(
+        env!("CARGO_PKG_NAME").into(),
+        env!("CARGO_PKG_VERSION").into(),
+    );
+
     log::info!("Starting call the police bot...");
 
     let bot = Bot::from_env().set_api_url(

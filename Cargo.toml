@@ -13,6 +13,8 @@ opt-level = 3
 debug = false
 
 [workspace.dependencies]
+observability = { path = "crates/observability" }
+
 log = "0.4"
 pretty_env_logger = "0.5"
 tokio = { version = "1.38", features = ["rt-multi-thread", "macros"] }

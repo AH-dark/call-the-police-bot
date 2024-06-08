@@ -7,7 +7,7 @@ use opentelemetry_sdk::resource::{
 use opentelemetry_sdk::Resource;
 
 /// Initialize the open-telemetry resource.
-pub fn init_resource() -> Resource {
+pub fn init_resource(service_name: String, service_version: String) -> Resource {
     let detector_resources = Box::new(Resource::from_detectors(
         Duration::from_secs(10),
         vec![
@@ -20,11 +20,11 @@ pub fn init_resource() -> Resource {
     Resource::new(vec![
         KeyValue::new(
             opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-            "call-the-police-bot",
+            service_name,
         ),
         KeyValue::new(
             opentelemetry_semantic_conventions::resource::SERVICE_VERSION,
-            env!("CARGO_PKG_VERSION"),
+            service_version,
         ),
     ])
     .merge(detector_resources)
