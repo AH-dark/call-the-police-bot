@@ -1,0 +1,32 @@
+name: call-the-police-bot
+
+networks:
+  app-network:
+
+services:
+  bot-api-server:
+    image: aiogram/telegram-bot-api
+    env_file:
+      - ".env"
+    networks:
+      - app-network
+
+  call-the-police-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ".env"
+    networks:
+      - app-network
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_DB: "call_the_police_bot"
+    networks:
+      - app-network
+    ports:
+      - "5432:5432"
