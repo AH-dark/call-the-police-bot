@@ -1,0 +1,27 @@
+[package]
+name = "call-the-police-bot"
+version = "1.2.0"
+edition = "2021"
+
+[[bin]]
+name = "call-the-police-bot"
+path = "src/main.rs"
+
+[dependencies]
+log = { workspace = true }
+pretty_env_logger = { workspace = true }
+tokio = { workspace = true }
+dotenv = { workspace = true }
+anyhow = { workspace = true }
+
+opentelemetry = { workspace = true }
+opentelemetry-otlp = { workspace = true, features = ["http-proto", "grpc-tonic", "reqwest"] }
+opentelemetry_sdk = { workspace = true, features = ["rt-tokio"] }
+opentelemetry-semantic-conventions = { workspace = true }
+tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["registry", "env-filter"] }
+
+teloxide = { workspace = true, features = ["macros", "webhooks", "webhooks-axum"] }
+reqwest = "0.11" # for teloxide
+rand = "0.8"
