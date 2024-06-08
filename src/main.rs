@@ -1,4 +1,3 @@
-use anyhow::Context;
 use teloxide::{Bot, dptree, update_listeners};
 use teloxide::dispatching::{HandlerExt, UpdateFilterExt};
 use teloxide::prelude::{Dispatcher, LoggingErrorHandler, Update};
