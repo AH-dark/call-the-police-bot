@@ -60,7 +60,8 @@ pub async fn handle_inline_query(bot: Bot, query: InlineQuery) -> ResponseResult
         .query
         .parse::<usize>()
         .unwrap_or_else(|_| util::rand_num(8, 96))
-        .max(1);
+        .max(1)
+        .min(4096);
 
     let results = vec![InlineQueryResult::Article(
         InlineQueryResultArticle::new(
@@ -74,7 +75,7 @@ pub async fn handle_inline_query(bot: Bot, query: InlineQuery) -> ResponseResult
         .thumb_url(
             "https://raw.githubusercontent.com/AH-dark/call-the-police-bot/main/assets/call_back_query_thumb.jpeg"
                 .parse()
-                .unwrap(),
+                .expect("valid URL"),
         ),
     )];
 
