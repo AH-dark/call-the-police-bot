@@ -1,5 +1,6 @@
 use anyhow::Context;
-use sea_orm::{ActiveValue, DatabaseConnection, prelude::*, QuerySelect};
+use sea_orm::{ActiveValue, DatabaseConnection, FromQueryResult, prelude::*, QuerySelect};
+use sea_orm::sea_query::Alias;
 
 #[derive(Debug, Clone)]
 pub struct Service {
@@ -24,6 +25,14 @@ impl Service {
     }
 }
 
+#[derive(FromQueryResult, Debug, Clone, Copy)]
+pub struct UserStatResult {
+    pub total_emoji_sent: Option<i64>,
+    pub total_command_triggered: Option<i32>,
+    pub total_inline_query_sent: Option<i32>,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct UserStatData {
     pub total_emoji_sent: i64,
     pub total_command_triggered: i32,
@@ -97,17 +106,24 @@ impl IUserStat for Service {
             .filter(entities::stat_user::Column::BeginAt.between(begin, end))
             .select_only()
             .column_as(
-                entities::stat_user::Column::TotalEmojiSent.sum(),
+                entities::stat_user::Column::TotalEmojiSent
+                    .sum()
+                    .cast_as(Alias::new("bigint")),
                 "total_emoji_sent",
             )
             .column_as(
-                entities::stat_user::Column::TotalCommandTriggered.sum(),
+                entities::stat_user::Column::TotalCommandTriggered
+                    .sum()
+                    .cast_as(Alias::new("integer")),
                 "total_command_triggered",
             )
             .column_as(
-                entities::stat_user::Column::TotalInlineQuerySent.sum(),
+                entities::stat_user::Column::TotalInlineQuerySent
+                    .sum()
+                    .cast_as(Alias::new("integer")),
                 "total_inline_query_sent",
             )
+            .into_model::<UserStatResult>()
             .one(&self.db)
             .await
             .context("Failed to get user stat")?;
@@ -120,12 +136,10 @@ impl IUserStat for Service {
             });
         }
 
-        let data = data.unwrap();
-
         Ok(UserStatData {
-            total_emoji_sent: data.total_emoji_sent,
-            total_command_triggered: data.total_command_triggered,
-            total_inline_query_sent: data.total_inline_query_sent,
+            total_emoji_sent: data.unwrap().total_emoji_sent.unwrap_or(0),
+            total_command_triggered: data.unwrap().total_command_triggered.unwrap_or(0),
+            total_inline_query_sent: data.unwrap().total_inline_query_sent.unwrap_or(0),
         })
     }
 

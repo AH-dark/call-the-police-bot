@@ -22,6 +22,8 @@ pub enum BotCommand {
     Help,
     #[command(description = "Call the police")]
     CallPolice,
+    #[command(description = "Get user stat")]
+    Stat,
 }
 
 #[tracing::instrument]
@@ -127,7 +129,7 @@ pub async fn handle_inline_query(bot: Bot, query: InlineQuery) -> anyhow::Result
 }
 
 #[tracing::instrument]
-pub async fn chosen_inline_result_handler(
+pub async fn handle_chosen_inline_result(
     chosen_inline_result: ChosenInlineResult,
     user_stat_service: services::user_stat::Service,
 ) -> anyhow::Result<()> {
@@ -138,6 +140,43 @@ pub async fn chosen_inline_result_handler(
             log::warn!("Failed to increment total inline query sent: {:?}", e);
         })
         .ok();
+
+    Ok(())
+}
+
+#[tracing::instrument]
+pub async fn handle_stat(
+    bot: Bot,
+    msg: Message,
+    user_stat_service: services::user_stat::Service,
+) -> anyhow::Result<()> {
+    let user_id = msg
+        .from()
+        .map(|from| from.id.0 as i64)
+        .ok_or_else(|| anyhow::anyhow!("No user info"))?;
+
+    let data = user_stat_service.get_user_stat(user_id, 1).await?;
+
+    bot.send_message(
+        msg.chat.id,
+        format!(
+            r#"
+            Total police emoji sent: {}
+            Total command triggered: {}
+            Total inline query sent: {}
+            "#,
+            data.total_emoji_sent, data.total_command_triggered, data.total_inline_query_sent
+        )
+        .trim()
+        .split('\n')
+        .map(|s| s.trim())
+        .collect::<Vec<&str>>()
+        .join("\n"),
+    )
+    .reply_to_message_id(msg.id)
+    .send()
+    .await
+    .context("Failed to send message")?;
 
     Ok(())
 }

@@ -62,10 +62,11 @@ async fn main() -> anyhow::Result<()> {
                 .filter_command::<BotCommand>()
                 .branch(dptree::case![BotCommand::Start].endpoint(handle_start))
                 .branch(dptree::case![BotCommand::Help].endpoint(handle_help))
-                .branch(dptree::case![BotCommand::CallPolice].endpoint(handle_call_police)),
+                .branch(dptree::case![BotCommand::CallPolice].endpoint(handle_call_police))
+                .branch(dptree::case![BotCommand::Stat].endpoint(handle_stat)),
         )
         .branch(Update::filter_inline_query().endpoint(handle_inline_query))
-        .branch(Update::filter_chosen_inline_result().endpoint(chosen_inline_result_handler));
+        .branch(Update::filter_chosen_inline_result().endpoint(handle_chosen_inline_result));
 
     // init database connection
     let database_connection =
