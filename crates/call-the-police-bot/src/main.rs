@@ -1,7 +1,7 @@
 use std::env;
 
 use anyhow::Context;
-use sea_orm::{Database, DatabaseConnection};
+use sea_orm::Database;
 use teloxide::{Bot, dptree, update_listeners};
 use teloxide::dispatching::{HandlerExt, UpdateFilterExt};
 use teloxide::prelude::{Dispatcher, LoggingErrorHandler, Update};
@@ -9,8 +9,9 @@ use teloxide::prelude::{Dispatcher, LoggingErrorHandler, Update};
 use crate::handlers::*;
 use crate::util::env_or_default;
 
-mod handlers;
-mod util;
+pub(crate) mod handlers;
+pub(crate) mod services;
+pub(crate) mod util;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -63,7 +64,8 @@ async fn main() -> anyhow::Result<()> {
                 .branch(dptree::case![BotCommand::Help].endpoint(handle_help))
                 .branch(dptree::case![BotCommand::CallPolice].endpoint(handle_call_police)),
         )
-        .branch(Update::filter_inline_query().endpoint(handle_inline_query));
+        .branch(Update::filter_inline_query().endpoint(handle_inline_query))
+        .branch(Update::filter_chosen_inline_result().endpoint(chosen_inline_result_handler));
 
     // init database connection
     let database_connection =
@@ -71,8 +73,10 @@ async fn main() -> anyhow::Result<()> {
             .await
             .context("Failed to connect to the database")?;
 
+    let user_stat_service = services::user_stat::Service::new(database_connection.clone());
+
     Dispatcher::builder(bot, handler)
-        .dependencies(dptree::deps![database_connection])
+        .dependencies(dptree::deps![database_connection, user_stat_service])
         .distribution_function(|_| None::<std::convert::Infallible>)
         .build()
         .dispatch_with_listener(update_listener, LoggingErrorHandler::new())

@@ -8,6 +8,7 @@ name = "call-the-police-bot"
 path = "src/main.rs"
 
 [dependencies]
+entities = { workspace = true }
 observability = { workspace = true }
 
 log = { workspace = true }
@@ -16,6 +17,7 @@ tokio = { workspace = true }
 dotenv = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
+chrono = { workspace = true }
 
 teloxide = { workspace = true, features = ["macros", "webhooks", "webhooks-axum"] }
 reqwest = "0.11" # for teloxide

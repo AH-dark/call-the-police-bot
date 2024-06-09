@@ -564,7 +564,9 @@ name = "call-the-police-bot"
 version = "1.2.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "dotenv",
+ "entities",
  "log",
  "observability",
  "pretty_env_logger",
