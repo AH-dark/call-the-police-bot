@@ -1,12 +1,18 @@
+use std::env;
+
+use anyhow::Context;
+use sea_orm::Database;
 use teloxide::{Bot, dptree, update_listeners};
 use teloxide::dispatching::{HandlerExt, UpdateFilterExt};
 use teloxide::prelude::{Dispatcher, LoggingErrorHandler, Update};
+use teloxide::types::Message;
 
 use crate::handlers::*;
 use crate::util::env_or_default;
 
-mod handlers;
-mod util;
+pub(crate) mod handlers;
+pub(crate) mod services;
+pub(crate) mod util;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -22,42 +28,70 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Starting call the police bot...");
 
+    // create the bot instance
     let bot = Bot::from_env().set_api_url(
-        reqwest::Url::parse(
-            env_or_default("TELEGRAM_API_URL", "https://api.telegram.org").as_str(),
-        )
-        .unwrap(),
+        env_or_default("TELEGRAM_API_URL", "https://api.telegram.org")
+            .as_str()
+            .parse()
+            .context("Failed to parse TELEGRAM_API_URL")?,
     );
 
+    // create the update listener
     let update_listener = {
         let webhook_listen_addr = env_or_default("WEBHOOK_LISTEN_ADDR", "0.0.0.0:8080")
             .parse()
-            .unwrap();
+            .context("Failed to parse WEBHOOK_LISTEN_ADDR")?;
         log::debug!("webhook_listen_addr: {}", webhook_listen_addr);
 
         let webhook_url = env_or_default("WEBHOOK_URL", "http://call-the-police-bot:8080")
             .parse()
-            .unwrap();
+            .context("Failed to parse WEBHOOK_URL")?;
         log::debug!("webhook_url: {}", webhook_url);
 
         update_listeners::webhooks::axum(
             bot.clone(),
             update_listeners::webhooks::Options::new(webhook_listen_addr, webhook_url),
         )
-        .await?
+        .await
+        .context("Failed to create the webhook update listener")?
     };
 
+    // define the handler
     let handler = dptree::entry()
         .branch(
             Update::filter_message()
                 .filter_command::<BotCommand>()
                 .branch(dptree::case![BotCommand::Start].endpoint(handle_start))
                 .branch(dptree::case![BotCommand::Help].endpoint(handle_help))
-                .branch(dptree::case![BotCommand::CallPolice].endpoint(handle_call_police)),
+                .branch(dptree::case![BotCommand::CallPolice].endpoint(handle_call_police))
+                .branch(
+                    dptree::case![BotCommand::Stat]
+                        .filter(|msg: Message| msg.from().is_some())
+                        .endpoint(handle_stat),
+                )
+                .branch(
+                    dptree::case![BotCommand::ChatStat]
+                        .filter(|msg: Message| msg.chat.is_group() || msg.chat.is_supergroup())
+                        .endpoint(handle_chat_stat),
+                ),
         )
         .branch(Update::filter_inline_query().endpoint(handle_inline_query));
 
+    // init database connection
+    let database_connection =
+        Database::connect(env::var("DATABASE_URL").expect("DATABASE_URL must be set"))
+            .await
+            .context("Failed to connect to the database")?;
+
+    let user_stat_service = services::user_stat::Service::new(database_connection.clone());
+    let chat_stat_service = services::chat_stat::Service::new(database_connection.clone());
+
     Dispatcher::builder(bot, handler)
+        .dependencies(dptree::deps![
+            database_connection,
+            user_stat_service,
+            chat_stat_service
+        ])
         .distribution_function(|_| None::<std::convert::Infallible>)
         .build()
         .dispatch_with_listener(update_listener, LoggingErrorHandler::new())

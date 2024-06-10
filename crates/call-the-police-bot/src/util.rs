@@ -20,9 +20,9 @@ pub static CHARACTERS: &str = "🚨👮🚔🚓";
 
 /// Generate a random string of emojis.
 #[tracing::instrument]
-pub fn call_police_string(n: usize) -> String {
+pub fn call_police_string(n: u64) -> String {
     let mut rng = thread_rng();
-    let mut s = String::with_capacity(n); // pre-allocate memory
+    let mut s = String::with_capacity(n as usize); // pre-allocate memory
 
     for _ in 0..n {
         s.push(CHARACTERS.chars().choose(&mut rng).unwrap());
