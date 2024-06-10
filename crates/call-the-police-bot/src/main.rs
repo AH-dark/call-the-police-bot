@@ -5,6 +5,7 @@ use sea_orm::Database;
 use teloxide::{Bot, dptree, update_listeners};
 use teloxide::dispatching::{HandlerExt, UpdateFilterExt};
 use teloxide::prelude::{Dispatcher, LoggingErrorHandler, Update};
+use teloxide::types::Message;
 
 use crate::handlers::*;
 use crate::util::env_or_default;
@@ -63,10 +64,18 @@ async fn main() -> anyhow::Result<()> {
                 .branch(dptree::case![BotCommand::Start].endpoint(handle_start))
                 .branch(dptree::case![BotCommand::Help].endpoint(handle_help))
                 .branch(dptree::case![BotCommand::CallPolice].endpoint(handle_call_police))
-                .branch(dptree::case![BotCommand::Stat].endpoint(handle_stat)),
+                .branch(
+                    dptree::case![BotCommand::Stat]
+                        .filter(|msg: Message| msg.from().is_some())
+                        .endpoint(handle_stat),
+                )
+                .branch(
+                    dptree::case![BotCommand::ChatStat]
+                        .filter(|msg: Message| msg.chat.is_group() || msg.chat.is_supergroup())
+                        .endpoint(handle_chat_stat),
+                ),
         )
-        .branch(Update::filter_inline_query().endpoint(handle_inline_query))
-        .branch(Update::filter_chosen_inline_result().endpoint(handle_chosen_inline_result));
+        .branch(Update::filter_inline_query().endpoint(handle_inline_query));
 
     // init database connection
     let database_connection =
@@ -75,9 +84,14 @@ async fn main() -> anyhow::Result<()> {
             .context("Failed to connect to the database")?;
 
     let user_stat_service = services::user_stat::Service::new(database_connection.clone());
+    let chat_stat_service = services::chat_stat::Service::new(database_connection.clone());
 
     Dispatcher::builder(bot, handler)
-        .dependencies(dptree::deps![database_connection, user_stat_service])
+        .dependencies(dptree::deps![
+            database_connection,
+            user_stat_service,
+            chat_stat_service
+        ])
         .distribution_function(|_| None::<std::convert::Infallible>)
         .build()
         .dispatch_with_listener(update_listener, LoggingErrorHandler::new())

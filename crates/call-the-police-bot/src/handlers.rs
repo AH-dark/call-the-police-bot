@@ -7,12 +7,13 @@ use teloxide::types::{
 use teloxide::utils::command::BotCommands;
 
 use crate::{services, util};
+use crate::services::chat_stat::IChatStat;
 use crate::services::user_stat::IUserStat;
 use crate::util::rand_num;
 
 #[derive(BotCommands, Clone, Debug, PartialEq, Eq)]
 #[command(
-    rename_rule = "lowercase",
+    rename_rule = "snake_case",
     description = "These commands are supported:"
 )]
 pub enum BotCommand {
@@ -20,10 +21,12 @@ pub enum BotCommand {
     Start,
     #[command(description = "Get help")]
     Help,
-    #[command(description = "Call the police")]
+    #[command(description = "Call the police", rename = "callpolice")]
     CallPolice,
     #[command(description = "Get user stat")]
     Stat,
+    #[command(description = "Get chat stat")]
+    ChatStat,
 }
 
 #[tracing::instrument]
@@ -55,6 +58,7 @@ pub async fn handle_call_police(
     bot: Bot,
     msg: Message,
     user_stat_service: services::user_stat::Service,
+    chat_stat_service: services::chat_stat::Service,
 ) -> anyhow::Result<()> {
     let times = util::rand_num(8, 96);
     bot.send_message(msg.chat.id, util::call_police_string(times))
@@ -80,6 +84,22 @@ pub async fn handle_call_police(
             })
             .ok();
     }
+
+    chat_stat_service
+        .increment_total_command_triggered(msg.chat.id.0, 1)
+        .await
+        .map_err(|e| {
+            log::warn!("Failed to increment total command triggered: {:?}", e);
+        })
+        .ok();
+
+    chat_stat_service
+        .increment_total_emoji_sent(msg.chat.id.0, times as i64)
+        .await
+        .map_err(|e| {
+            log::warn!("Failed to increment total emoji sent: {:?}", e);
+        })
+        .ok();
 
     Ok(())
 }
@@ -129,22 +149,6 @@ pub async fn handle_inline_query(bot: Bot, query: InlineQuery) -> anyhow::Result
 }
 
 #[tracing::instrument]
-pub async fn handle_chosen_inline_result(
-    chosen_inline_result: ChosenInlineResult,
-    user_stat_service: services::user_stat::Service,
-) -> anyhow::Result<()> {
-    user_stat_service
-        .increment_total_inline_query_sent(chosen_inline_result.from.id.0 as i64, 1)
-        .await
-        .map_err(|e| {
-            log::warn!("Failed to increment total inline query sent: {:?}", e);
-        })
-        .ok();
-
-    Ok(())
-}
-
-#[tracing::instrument]
 pub async fn handle_stat(
     bot: Bot,
     msg: Message,
@@ -166,6 +170,54 @@ pub async fn handle_stat(
         .get_user_stat(user_id, time_range)
         .await
         .context("Failed to get user stat")?;
+
+    bot.send_message(
+        msg.chat.id,
+        format!(
+            r#"
+            Last {} days:
+            - Total emoji sent: {}
+            - Total command triggered: {}
+            - Total inline query sent: {}
+            "#,
+            time_range,
+            data.total_emoji_sent,
+            data.total_command_triggered,
+            data.total_inline_query_sent,
+        )
+        .trim()
+        .split('\n')
+        .map(|s| s.trim())
+        .collect::<Vec<&str>>()
+        .join("\n"),
+    )
+    .reply_to_message_id(msg.id)
+    .send()
+    .await
+    .context("Failed to send message")?;
+
+    Ok(())
+}
+
+#[tracing::instrument]
+pub async fn handle_chat_stat(
+    bot: Bot,
+    msg: Message,
+    chat_stat_service: services::chat_stat::Service,
+) -> anyhow::Result<()> {
+    let chat_id = msg.chat.id.0;
+
+    let time_range = msg.text().map_or(7, |text| {
+        text.split_whitespace()
+            .nth(1)
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(7)
+    });
+
+    let data = chat_stat_service
+        .get_chat_stat(chat_id, time_range)
+        .await
+        .context("Failed to get chat stat")?;
 
     bot.send_message(
         msg.chat.id,
