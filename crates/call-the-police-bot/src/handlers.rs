@@ -10,7 +10,7 @@ use crate::{services, util};
 use crate::services::user_stat::IUserStat;
 use crate::util::rand_num;
 
-#[derive(BotCommands, Clone)]
+#[derive(BotCommands, Clone, Debug, PartialEq, Eq)]
 #[command(
     rename_rule = "lowercase",
     description = "These commands are supported:"
@@ -155,17 +155,31 @@ pub async fn handle_stat(
         .map(|from| from.id.0 as i64)
         .ok_or_else(|| anyhow::anyhow!("No user info"))?;
 
-    let data = user_stat_service.get_user_stat(user_id, 1).await?;
+    let time_range = msg.text().map_or(7, |text| {
+        text.split_whitespace()
+            .nth(1)
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(7)
+    });
+
+    let data = user_stat_service
+        .get_user_stat(user_id, time_range)
+        .await
+        .context("Failed to get user stat")?;
 
     bot.send_message(
         msg.chat.id,
         format!(
             r#"
-            Total police emoji sent: {}
-            Total command triggered: {}
-            Total inline query sent: {}
+            Last {} days:
+            - Total emoji sent: {}
+            - Total command triggered: {}
+            - Total inline query sent: {}
             "#,
-            data.total_emoji_sent, data.total_command_triggered, data.total_inline_query_sent
+            time_range,
+            data.total_emoji_sent,
+            data.total_command_triggered,
+            data.total_inline_query_sent,
         )
         .trim()
         .split('\n')
