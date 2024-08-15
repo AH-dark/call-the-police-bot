@@ -1,9 +1,9 @@
-use teloxide::Bot;
 use teloxide::prelude::*;
 use teloxide::types::{
     InlineQueryResult, InlineQueryResultArticle, InputMessageContent, InputMessageContentText,
 };
 use teloxide::utils::command::BotCommands;
+use teloxide::Bot;
 
 use crate::util;
 
@@ -51,6 +51,9 @@ pub async fn handle_call_police(bot: Bot, msg: Message) -> ResponseResult<()> {
         .send()
         .await?;
 
+    metrics::counter!("call_the_police_bot.command_calling").increment(1);
+    metrics::counter!("call_the_police_bot.command_sticker_total").increment(times as u64);
+
     Ok(())
 }
 
@@ -60,8 +63,7 @@ pub async fn handle_inline_query(bot: Bot, query: InlineQuery) -> ResponseResult
         .query
         .parse::<usize>()
         .unwrap_or_else(|_| util::rand_num(8, 96))
-        .max(1)
-        .min(4096);
+        .clamp(1, 4096);
 
     let results = vec![InlineQueryResult::Article(
         InlineQueryResultArticle::new(
@@ -71,12 +73,12 @@ pub async fn handle_inline_query(bot: Bot, query: InlineQuery) -> ResponseResult
                 times,
             ))),
         )
-        .description("Generate a random string of police emojis.")
-        .thumb_url(
-            "https://raw.githubusercontent.com/AH-dark/call-the-police-bot/main/assets/call_back_query_thumb.jpeg"
-                .parse()
-                .expect("valid URL"),
-        ),
+            .description("Generate a random string of police emojis.")
+            .thumb_url(
+                "https://raw.githubusercontent.com/AH-dark/call-the-police-bot/main/assets/call_back_query_thumb.jpeg"
+                    .parse()
+                    .expect("valid URL"),
+            ),
     )];
 
     bot.answer_inline_query(query.id, results)
@@ -84,6 +86,9 @@ pub async fn handle_inline_query(bot: Bot, query: InlineQuery) -> ResponseResult
         .cache_time(0)
         .send()
         .await?;
+
+    metrics::counter!("call_the_police_bot.inline_query_calling").increment(1);
+    metrics::counter!("call_the_police_bot.inline_query_sticker_total").increment(times as u64);
 
     Ok(())
 }
