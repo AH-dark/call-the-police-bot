@@ -24,9 +24,12 @@ We provide some environment variables to configure the bot:
 
 - `TELOXIDE_TOKEN` - The token of the bot on Telegram
 - `TELEGRAM_API_URL` - The URL of the Telegram API (default: `https://api.telegram.org`)
-- `OTEL_EXPORTER_ENDPOINT` - The endpoint of the OpenTelemetry exporter (default: `http://localhost:4317`)
-- `OTEL_EXPORTER` - The type of the OpenTelemetry exporter (default: `otlp_grpc`, available: `otlp_grpc`, `otlp_http`)
-- `OTEL_SAMPLE_RATE` - The sample rate of the OpenTelemetry exporter (default: `1.0`)
+- `OTEL_TRACE_EXPORTER_ENDPOINT` - The endpoint of the OpenTelemetry exporter (default: `http://localhost:4317`)
+- `OTEL_TRACE_EXPORTER` - The type of the OpenTelemetry exporter (default: `otlp_grpc`, available: `otlp_grpc`,
+  `otlp_http`)
+- `OTEL_TRACE_SAMPLE_RATE` - The sample rate of the OpenTelemetry exporter (default: `1.0`)
+- `OTEL_METRICS_EXPORTER` - The type of the OpenTelemetry metrics exporter (available: `prometheus`)
+- `OTEL_METRICS_EXPORTER_ENDPOINT` - The endpoint of the OpenTelemetry metrics exporter (default: `localhost:9090`)
 - `RUST_LOG` - The log level of the application (available: `trace`, `debug`, `info`, `warn`, `error`)
 
 ## License
