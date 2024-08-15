@@ -8,6 +8,7 @@ name = "observability"
 path = "src/lib.rs"
 
 [dependencies]
+tokio = { workspace = true }
 opentelemetry = { workspace = true }
 opentelemetry-otlp = { workspace = true, features = ["http-proto", "grpc-tonic", "reqwest"] }
 opentelemetry_sdk = { workspace = true, features = ["rt-tokio"] }
@@ -15,3 +16,7 @@ opentelemetry-semantic-conventions = { workspace = true }
 tracing = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["registry", "env-filter"] }
+metrics = { workspace = true }
+metrics-util = { workspace = true }
+metrics-exporter-prometheus = { workspace = true }
+metrics-tracing-context = { workspace = true }

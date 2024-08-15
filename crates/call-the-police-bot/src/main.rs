@@ -1,6 +1,6 @@
-use teloxide::{Bot, dptree, update_listeners};
 use teloxide::dispatching::{HandlerExt, UpdateFilterExt};
 use teloxide::prelude::{Dispatcher, LoggingErrorHandler, Update};
+use teloxide::{dptree, update_listeners, Bot};
 
 use crate::handlers::*;
 use crate::util::env_or_default;
@@ -15,10 +15,11 @@ async fn main() -> anyhow::Result<()> {
         Err(e) => log::warn!("Failed to load .env file: {}", e),
     }
     pretty_env_logger::init();
-    observability::tracing::init_tracer(
+    observability::init(
         env!("CARGO_PKG_NAME").into(),
         env!("CARGO_PKG_VERSION").into(),
-    );
+    )
+    .expect("Failed to initialize observability");
 
     log::info!("Starting call the police bot...");
 

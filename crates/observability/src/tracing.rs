@@ -4,20 +4,21 @@ use opentelemetry_otlp::{
 };
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::runtime::Tokio;
-use opentelemetry_sdk::trace::Sampler;
-use tracing_subscriber::{EnvFilter, Registry};
-use tracing_subscriber::layer::SubscriberExt;
+use opentelemetry_sdk::trace::{Sampler, Tracer};
+use opentelemetry_sdk::Resource;
+use tracing_opentelemetry::OpenTelemetryLayer;
+use tracing_subscriber::Registry;
 
-use crate::resource::init_resource;
-
-pub fn init_tracer(service_name: String, service_version: String) {
+pub fn tracer_layer(
+    resource: Resource,
+) -> Result<Option<OpenTelemetryLayer<Registry, Tracer>>, Box<dyn std::error::Error>> {
     let export_config = ExportConfig {
-        endpoint: std::env::var("OTEL_EXPORTER_ENDPOINT")
+        endpoint: std::env::var("OTEL_TRACE_EXPORTER_ENDPOINT")
             .unwrap_or_else(|_| "http://localhost:4317".to_string()),
         ..Default::default()
     };
 
-    let exporter = match std::env::var("OTEL_EXPORTER")
+    let exporter = match std::env::var("OTEL_TRACE_EXPORTER")
         .unwrap_or_else(|_| "otlp_grpc".to_string())
         .as_str()
     {
@@ -28,7 +29,7 @@ pub fn init_tracer(service_name: String, service_version: String) {
             TonicExporterBuilder::default().with_export_config(export_config),
         ),
         _ => {
-            panic!("`OTEL_EXPORTER` not supported");
+            return Ok(None);
         }
     };
 
@@ -40,19 +41,16 @@ pub fn init_tracer(service_name: String, service_version: String) {
         .with_trace_config(
             opentelemetry_sdk::trace::config()
                 .with_sampler(Sampler::TraceIdRatioBased(
-                    std::env::var("OTEL_SAMPLE_RATE")
+                    std::env::var("OTEL_TRACE_SAMPLE_RATE")
                         .unwrap_or_else(|_| "1".to_string())
                         .parse()
                         .unwrap(),
                 ))
-                .with_resource(init_resource(service_name, service_version)),
+                .with_resource(resource),
         )
         .install_batch(Tokio)
         .expect("Failed to install `opentelemetry` tracer.");
 
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("INFO"));
-    let subscriber = Registry::default().with(telemetry).with(env_filter);
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("Failed to install `tracing` subscriber.");
+    Ok(Some(telemetry))
 }

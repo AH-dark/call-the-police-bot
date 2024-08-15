@@ -21,12 +21,16 @@ tokio = { version = "1.38", features = ["rt-multi-thread", "macros"] }
 dotenv = "0.15"
 anyhow = "1.0"
 
-opentelemetry = "0.23"
+opentelemetry = { version = "0.23", features = ["trace", "metrics"] }
 opentelemetry-otlp = { version = "0.16" }
 opentelemetry_sdk = { version = "0.23" }
 opentelemetry-semantic-conventions = "0.15"
 tracing = "0.1"
-tracing-opentelemetry = "0.24"
-tracing-subscriber = { version = "0.3" }
+tracing-opentelemetry = { version = "0.24", features = ["metrics"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+metrics = { version = "0.23.0" }
+metrics-util = { version = "0.17.0" }
+metrics-exporter-prometheus = { version = "0.15.3", default-features = false, features = ["http-listener"] }
+metrics-tracing-context = { version = "0.16.0" }
 
 teloxide = "0.12"
