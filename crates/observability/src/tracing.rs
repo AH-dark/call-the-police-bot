@@ -19,7 +19,7 @@ pub fn tracer_layer(
     };
 
     let exporter = match std::env::var("OTEL_TRACE_EXPORTER")
-        .unwrap_or_else(|_| "otlp_grpc".to_string())
+        .unwrap_or_default()
         .as_str()
     {
         "otlp_http" => SpanExporterBuilder::Http(

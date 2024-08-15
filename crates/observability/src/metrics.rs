@@ -4,7 +4,10 @@ use std::net::SocketAddr;
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusRecorder};
 
 pub fn metrics_layer() -> Result<Option<PrometheusRecorder>, Box<dyn std::error::Error>> {
-    match env::var("OTEL_METRICS_EXPORTER")?.as_str() {
+    match env::var("OTEL_METRICS_EXPORTER")
+        .unwrap_or_default()
+        .as_str()
+    {
         "prometheus" => {
             let socket = env::var("OTEL_METRICS_EXPORTER_ENDPOINT")
                 .clone()
