@@ -16,6 +16,7 @@ tokio = { workspace = true }
 dotenv = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
+metrics = { workspace = true }
 
 teloxide = { workspace = true, features = ["macros", "webhooks", "webhooks-axum"] }
 reqwest = "0.11" # for teloxide

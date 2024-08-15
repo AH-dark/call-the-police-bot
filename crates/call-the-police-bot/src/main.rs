@@ -23,22 +23,16 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Starting call the police bot...");
 
-    let bot = Bot::from_env().set_api_url(
-        reqwest::Url::parse(
-            env_or_default("TELEGRAM_API_URL", "https://api.telegram.org").as_str(),
-        )
-        .unwrap(),
-    );
+    let bot = Bot::from_env().set_api_url(reqwest::Url::parse(
+        env_or_default("TELEGRAM_API_URL", "https://api.telegram.org").as_str(),
+    )?);
 
     let update_listener = {
-        let webhook_listen_addr = env_or_default("WEBHOOK_LISTEN_ADDR", "0.0.0.0:8080")
-            .parse()
-            .unwrap();
+        let webhook_listen_addr = env_or_default("WEBHOOK_LISTEN_ADDR", "0.0.0.0:8080").parse()?;
         log::debug!("webhook_listen_addr: {}", webhook_listen_addr);
 
-        let webhook_url = env_or_default("WEBHOOK_URL", "http://call-the-police-bot:8080")
-            .parse()
-            .unwrap();
+        let webhook_url =
+            env_or_default("WEBHOOK_URL", "http://call-the-police-bot:8080").parse()?;
         log::debug!("webhook_url: {}", webhook_url);
 
         update_listeners::webhooks::axum(
