@@ -14,12 +14,12 @@ async fn main() -> anyhow::Result<()> {
         Ok(_) => log::info!("Loaded .env file"),
         Err(e) => log::warn!("Failed to load .env file: {}", e),
     }
-    pretty_env_logger::init();
     observability::init(
         env!("CARGO_PKG_NAME").into(),
         env!("CARGO_PKG_VERSION").into(),
     )
     .expect("Failed to initialize observability");
+    pretty_env_logger::try_init_timed().ok();
 
     log::info!("Starting call the police bot...");
 
