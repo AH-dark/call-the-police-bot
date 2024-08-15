@@ -22,4 +22,7 @@ COPY --from=builder /usr/src/call-the-police-bot/target/release/${EXE} /app/appl
 USER root
 RUN chmod +x /app/application
 
+# metrics exporter
+EXPOSE 9090
+
 ENTRYPOINT ["/app/application"]
