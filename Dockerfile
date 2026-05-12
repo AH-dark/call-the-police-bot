@@ -5,8 +5,7 @@ RUN rustup default nightly
 
 COPY . .
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    cargo build --release
+RUN cargo build --release
 
 FROM debian:bookworm-slim as runner
 WORKDIR /app
